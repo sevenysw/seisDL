@@ -13,12 +13,12 @@ from __future__ import absolute_import
 from __future__ import division
 import seismic_data
 import tensorflow as tf
-import scipy.io as sio
 import matplotlib.pyplot as plt
 import numpy as np
 
 #initialization
 tf.set_random_seed(0)
+model_path = "../data/model.ckpt" 
 
 K = 32  
 L = 32
@@ -65,47 +65,51 @@ sess = tf.Session()
 sess.run(init)
 
 ss = seismic_data.load_data()
+saver = tf.train.Saver()
+
 
 nt = 500
-c  = np.zeros(500)
+c  = np.zeros(nt)
 
-for i in range(nt):
-	# load batch of images and correct answers
-	batch_X, batch_Y = ss.next_batch(100)
-	#print batch_X.shape, batch_Y.shape
-	train_data = {X:batch_X, Y_:batch_Y}
+def training_step():    
+    for i in range(nt):
+        # load batch of images and correct answers
+        batch_X, batch_Y = ss.next_batch(100)
+        #print batch_X.shape, batch_Y.shape
+        train_data = {X:batch_X, Y_:batch_Y}
 
-	# train
-	sess.run(train_step,feed_dict=train_data)
-	#success?
-	ct = sess.run([cross_entropy], feed_dict=train_data)
-	c[i] = ct[0]
-	print(i,c[i])
-	#success on test data?
-	#test_data = {X: ss.images, Y_:ss.labels}
-	#summary,_ = sess.run([merged,cross_entropy], feed_dict = test_data)
-	#if i % 10 == 0:
-	#	summary_writer.add_summary(summary,i)
+        # train
+        sess.run(train_step,feed_dict=train_data)
+        #success?
+        ct = sess.run([cross_entropy], feed_dict=train_data)
+        c[i] = ct[0]
+        print(i,c[i])
 
-#	print a,c
-t_X, t_Y = ss.test_data()
-test_data2 = {X:t_X, Y_:t_Y}
-Y_o = sess.run(output, feed_dict = test_data2)
-sio.savemat('../data/savemat.mat',{'y_':Y_o,'x_':test_data2[X],'yo':test_data2[Y_]})
+def test_step():       
+    t_X, t_Y = ss.test_data()
+    test_data2 = {X:t_X, Y_:t_Y}
+    Y_o = sess.run(output, feed_dict = test_data2)
+    t_X = t_X.squeeze()
+    t_Y = t_Y.squeeze()
+    Y_o = Y_o.squeeze()
+    
+    # plot results
+    plt.subplot(1,3,1)
+    plt.imshow(t_X)
+    plt.title('Input')
+    plt.subplot(1,3,2)
+    plt.imshow(t_Y)
+    plt.title('Original')
+    plt.subplot(1,3,3)
+    plt.imshow(Y_o)
+    plt.title('Output')
+#    plt.figure(2)
+#    plt.plot(c)
 
-t_X = t_X.squeeze()
-t_Y = t_Y.squeeze()
-Y_o = Y_o.squeeze()
+#training_step()
+#saver.save(sess, model_path)
+#saver.restore(sess, model_path)
+test_step()
 
-plt.subplot(1,3,1)
-plt.imshow(t_X)
-plt.title('Input')
-plt.subplot(1,3,2)
-plt.imshow(t_Y)
-plt.title('Original')
-plt.subplot(1,3,3)
-plt.imshow(Y_o)
-plt.title('Output')
-plt.figure(2)
-plt.plot(c)
+
 
