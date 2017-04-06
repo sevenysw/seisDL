@@ -2,7 +2,7 @@
 # 1, load data by python directly , show the result directly
 # 2, split train and test codes, save the trained network
 # 3, test for a whole portion
-# 4, visualize the train progress
+# 4, visualize the train progress and the network/dictionary
 # 5, adjust the paramter
 # 6, add more train samples
 # 7, transfer to workstation
@@ -14,6 +14,8 @@ from __future__ import division
 import seismic_data
 import tensorflow as tf
 import scipy.io as sio
+import matplotlib.pyplot as plt
+import numpy as np
 
 #initialization
 tf.set_random_seed(0)
@@ -64,7 +66,10 @@ sess.run(init)
 
 ss = seismic_data.load_data()
 
-for i in range(500):
+nt = 500
+c  = np.zeros(500)
+
+for i in range(nt):
 	# load batch of images and correct answers
 	batch_X, batch_Y = ss.next_batch(100)
 	#print batch_X.shape, batch_Y.shape
@@ -73,8 +78,9 @@ for i in range(500):
 	# train
 	sess.run(train_step,feed_dict=train_data)
 	#success?
-	c = sess.run([cross_entropy], feed_dict=train_data)
-	print(i,c)
+	ct = sess.run([cross_entropy], feed_dict=train_data)
+	c[i] = ct[0]
+	print(i,c[i])
 	#success on test data?
 	#test_data = {X: ss.images, Y_:ss.labels}
 	#summary,_ = sess.run([merged,cross_entropy], feed_dict = test_data)
@@ -85,8 +91,21 @@ for i in range(500):
 t_X, t_Y = ss.test_data()
 test_data2 = {X:t_X, Y_:t_Y}
 Y_o = sess.run(output, feed_dict = test_data2)
-sio.savemat('savemat.mat',{'y_':Y_o,'x_':test_data2[X],'yo':test_data2[Y_]})
+sio.savemat('../data/savemat.mat',{'y_':Y_o,'x_':test_data2[X],'yo':test_data2[Y_]})
 
+t_X = t_X.squeeze()
+t_Y = t_Y.squeeze()
+Y_o = Y_o.squeeze()
 
-#sess.close()
-#summary_writer.close()
+plt.subplot(1,3,1)
+plt.imshow(t_X)
+plt.title('Input')
+plt.subplot(1,3,2)
+plt.imshow(t_Y)
+plt.title('Original')
+plt.subplot(1,3,3)
+plt.imshow(Y_o)
+plt.title('Output')
+plt.figure(2)
+plt.plot(c)
+
