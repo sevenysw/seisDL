@@ -15,6 +15,7 @@ import seismic_data
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy.io as sio
 
 #initialization
 tf.set_random_seed(0)
@@ -68,7 +69,7 @@ ss = seismic_data.load_data()
 saver = tf.train.Saver()
 
 
-nt = 500
+nt = 1100
 c  = np.zeros(nt)
 
 def training_step():    
@@ -85,28 +86,40 @@ def training_step():
         c[i] = ct[0]
         print(i,c[i])
 
-def test_step():       
-    t_X, t_Y = ss.test_data()
-    test_data2 = {X:t_X, Y_:t_Y}
-    Y_o = sess.run(output, feed_dict = test_data2)
-    t_X = t_X.squeeze()
-    t_Y = t_Y.squeeze()
-    Y_o = Y_o.squeeze()
+def test_step():
+    data = sio.loadmat('../data/seismic.mat')
+    datas = data['data']
+    data_test  = datas[0,0][0:64,0:64]/255
+    n1,n2 = data_test.shape
+    r = 28
+    data_out = np.zeros([n1,n2])
+    omega = np.zeros([n1,n2])                    
+    for i in range(n1-r+1):
+        print(i)
+        for j in range(0,n2-r+1,2):
+            t1 = data_test[i:i+r,j:j+r:2]
+            t2 = data_test[i:i+r,j+1:j+r:2]
+            t_X = t1[np.newaxis,...,np.newaxis]
+            t_Y = t2[np.newaxis,...,np.newaxis]
+            test_data2 = {X:t_X, Y_:t_Y}
+            Y_o = sess.run(output, feed_dict = test_data2)
+            Y_o = Y_o.squeeze()
+            data_out[i:i+r,j+1:j+r:2] = data_out[i:i+r,j+1:j+r:2] + Y_o
+            omega[i:i+r,j+1:j+r:2] = omega[i:i+r,j+1:j+r:2] + np.ones([r,r/2])
+    data_out[:,1:n2:2] = np.divide(data_out[:,1:n2:2],omega[:,1:n2:2])
+    data_out[:,0:n2:2] = data_test[:,0:n2:2]
     
     # plot results
-    plt.subplot(1,3,1)
-    plt.imshow(t_X)
+    plt.subplot(1,2,1)
+    plt.imshow(data_test)
     plt.title('Input')
-    plt.subplot(1,3,2)
-    plt.imshow(t_Y)
-    plt.title('Original')
-    plt.subplot(1,3,3)
-    plt.imshow(Y_o)
+    plt.subplot(1,2,2)
+    plt.imshow(data_out)
     plt.title('Output')
-#    plt.figure(2)
-#    plt.plot(c)
+    #plt.figure(2)
+    #plt.plot(c)
 
-#training_step()
+training_step()
 #saver.save(sess, model_path)
 #saver.restore(sess, model_path)
 test_step()
